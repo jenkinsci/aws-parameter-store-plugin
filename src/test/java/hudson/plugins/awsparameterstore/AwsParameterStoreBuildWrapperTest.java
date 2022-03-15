@@ -73,7 +73,8 @@ public class AwsParameterStoreBuildWrapperTest {
   public String naming;
   @Parameter(4)
   public String namePrefixes;
-
+  @Parameter(5)
+  public Boolean exactNames;
 
   @Parameters
   public static Collection<Object[]> data() {
@@ -84,21 +85,24 @@ public class AwsParameterStoreBuildWrapperTest {
           false,
           CREDENTIALS_AWS_ADMIN,
           "basename",
-          ""
+          "",
+          false
         },
         {
           null,
           true,
           CREDENTIALS_AWS_NO_DESCRIBE,
           "relative",
-          ""
+          "",
+          false
         },
         {
           null,
           false,
           CREDENTIALS_AWS_NO_DESCRIBE,
           "",
-          "name_prefix"
+          "name_prefix",
+          false
         }
       }
     );
@@ -117,13 +121,14 @@ public class AwsParameterStoreBuildWrapperTest {
    */
   @Test
   public void testConstructor() {
-    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId, REGION_NAME, path, recursive, naming, namePrefixes);
+    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId, REGION_NAME, path, recursive, naming, namePrefixes, exactNames);
     Assert.assertEquals("credentialsId", credentialsId, awsParameterStoreBuildWrapper.getCredentialsId());
     Assert.assertEquals("regionName", REGION_NAME, awsParameterStoreBuildWrapper.getRegionName());
     Assert.assertEquals("path", path, awsParameterStoreBuildWrapper.getPath());
     Assert.assertEquals("recursive", recursive, awsParameterStoreBuildWrapper.getRecursive());
     Assert.assertEquals("naming", naming, awsParameterStoreBuildWrapper.getNaming());
     Assert.assertEquals("namePrefixes", namePrefixes, awsParameterStoreBuildWrapper.getNamePrefixes());
+    Assert.assertEquals("exactNames", exactNames, awsParameterStoreBuildWrapper.getExactNames());
   }
 
   /**
@@ -145,6 +150,7 @@ public class AwsParameterStoreBuildWrapperTest {
     Assert.assertEquals("recursive", recursive, awsParameterStoreBuildWrapper.getRecursive());
     Assert.assertEquals("naming", naming, awsParameterStoreBuildWrapper.getNaming());
     Assert.assertEquals("namePrefixes", StringUtils.stripToNull(namePrefixes), awsParameterStoreBuildWrapper.getNamePrefixes());
+    Assert.assertEquals("exactNames", exactNames, awsParameterStoreBuildWrapper.getExactNames());
   }
 
   /**
@@ -152,7 +158,7 @@ public class AwsParameterStoreBuildWrapperTest {
    */
   @Test
   public void testSetup() {
-    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId, REGION_NAME, path, recursive, naming, namePrefixes);
+    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId, REGION_NAME, path, recursive, naming, namePrefixes, exactNames);
     try {
       awsParameterStoreBuildWrapper.setUp((SimpleBuildWrapper.Context)null, null, null, null, null, null);
     } catch(Exception e) {

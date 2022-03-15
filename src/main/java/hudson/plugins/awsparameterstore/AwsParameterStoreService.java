@@ -24,6 +24,7 @@
 package hudson.plugins.awsparameterstore;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -64,7 +65,6 @@ import org.apache.commons.lang.StringUtils;
  * AWS Parameter Store client.
  *
  * @author Rik Turnbull
- *
  */
 public class AwsParameterStoreService {
   public static final String DEFAULT_REGION = "us-east-1";
@@ -184,10 +184,11 @@ public class AwsParameterStoreService {
    * @param recursive     fetch all parameters within a hierarchy
    * @param naming        environment variable naming: basename, relative, absolute
    * @param namePrefixes  filter parameters by Name with beginsWith filter
+   * @param exactNames    Whether name prefixes should be treated as exact parameter names
    */
-  public void buildEnvVars(SimpleBuildWrapper.Context context, Map<String,String> env, String path, Boolean recursive, String naming, String namePrefixes)  {
+  public void buildEnvVars(SimpleBuildWrapper.Context context, Map<String,String> env, String path, Boolean recursive, String naming, String namePrefixes, Boolean exactNames)  {
     if(StringUtils.isEmpty(path)) {
-      buildEnvVarsWithParameters(context, env, namePrefixes);
+      buildEnvVarsWithParameters(context, env, namePrefixes, exactNames, naming);
     } else {
       buildEnvVarsWithParametersByPath(context, env, path, recursive, naming);
     }
@@ -199,8 +200,49 @@ public class AwsParameterStoreService {
    * @param context       SimpleBuildWrapper context
    * @param env           execution environment variables
    * @param namePrefixes  filter parameters by Name with beginsWith filter
+   * @param exactNames    Whether name prefixes should be treated as exact parameter names
+   * @param naming        environment variable naming: basename, relative, absolute
    */
-  private void buildEnvVarsWithParameters(SimpleBuildWrapper.Context context, Map<String,String> env, String namePrefixes) {
+  private void buildEnvVarsWithParameters(SimpleBuildWrapper.Context context, Map<String,String> env, String namePrefixes, Boolean exactNames, String naming) {
+    final AWSSimpleSystemsManagement client = getAWSSimpleSystemsManagement(env);
+    List<String> names;
+
+    if (exactNames) {
+      LOGGER.log(Level.INFO, "Fetching parameters: \"" + namePrefixes + "\"");
+
+      names = Arrays.asList(namePrefixes.split(","));
+    } else {
+      LOGGER.log(Level.INFO, "Fetching parameters starting with prefix: \"" + namePrefixes + "\"");
+
+      names = getParameterNames(env, namePrefixes);
+    }
+
+    final GetParameterRequest getParameterRequest = new GetParameterRequest().withWithDecryption(true);
+    for(String name : names) {
+      getParameterRequest.setName(name);
+
+      try {
+        String envVarName = toEnvironmentVariable(name, getParameterPath(name), naming);
+
+        String value = client.
+                        getParameter(getParameterRequest).
+                        getParameter().
+                        getValue();
+
+        context.env(envVarName, value);
+      } catch(Exception e) {
+        LOGGER.log(Level.WARNING, "Cannot fetch parameter: \"" + name + "\"", e);
+      }
+    }
+  }
+
+  /**
+   * Fetches parameter names matching the prefixes.
+   *
+   * @param env           execution environment variables
+   * @param namePrefixes  filter parameters by Name with beginsWith filter
+   */
+  private List<String> getParameterNames(Map<String,String> env, String namePrefixes) {
     final AWSSimpleSystemsManagement client = getAWSSimpleSystemsManagement(env);
     final List<String> names = new ArrayList<String>();
 
@@ -208,9 +250,12 @@ public class AwsParameterStoreService {
       DescribeParametersRequest describeParametersRequest = new DescribeParametersRequest().withMaxResults(1);
       if (!StringUtils.isEmpty(namePrefixes)) {
         describeParametersRequest = describeParametersRequest.withParameterFilters(
-                new ParameterStringFilter().withKey("Name").withOption("BeginsWith").withValues(namePrefixes.split(",")));
+          new ParameterStringFilter().
+            withKey("Name").
+            withOption("BeginsWith").
+            withValues(namePrefixes.split(","))
+        );
       }
-
 
       do {
         final DescribeParametersResult describeParametersResult = client.describeParameters(describeParametersRequest);
@@ -223,16 +268,7 @@ public class AwsParameterStoreService {
       LOGGER.log(Level.WARNING, "Cannot fetch parameters: " + e.getMessage(), e);
     }
 
-    final GetParameterRequest getParameterRequest = new GetParameterRequest().withWithDecryption(true);
-    for(String name : names) {
-      getParameterRequest.setName(name);
-      try {
-        context.env(toEnvironmentVariable(name),
-          client.getParameter(getParameterRequest).getParameter().getValue());
-      } catch(Exception e) {
-        LOGGER.log(Level.WARNING, "Cannot fetch parameter: \"" + name + "\"", e);
-      }
-    }
+    return names;
   }
 
   /**
@@ -247,16 +283,23 @@ public class AwsParameterStoreService {
   public void buildEnvVarsWithParametersByPath(SimpleBuildWrapper.Context context, Map<String,String> env, String path, Boolean recursive, String naming)  {
     final AWSSimpleSystemsManagement client = getAWSSimpleSystemsManagement(env);
 
+    LOGGER.log(Level.INFO, "Fetching all parameters by path: \"" + path + "\"");
+
     try {
       final GetParametersByPathRequest getParametersByPathRequest =
-         new GetParametersByPathRequest().withPath(path).
-                                          withRecursive(recursive).
-                                          withWithDecryption(true);
+        new GetParametersByPathRequest().
+              withPath(path).
+              withRecursive(recursive).
+              withWithDecryption(true);
+
       do {
         final GetParametersByPathResult getParametersByPathResult = client.getParametersByPath(getParametersByPathRequest);
         for(Parameter parameter : getParametersByPathResult.getParameters()) {
           try {
-            context.env(toEnvironmentVariable(parameter.getName(), path, naming), parameter.getValue());
+            String name = toEnvironmentVariable(parameter.getName(), path, naming);
+            String value = parameter.getValue();
+
+            context.env(name, value);
           } catch(Exception e) {
             LOGGER.log(Level.WARNING, "Cannot add parameter to environment: " + e.getMessage(), e);
           }
@@ -266,15 +309,6 @@ public class AwsParameterStoreService {
     } catch(Exception e) {
       LOGGER.log(Level.WARNING, "Cannot fetch parameters by path: " + e.getMessage(), e);
     }
-  }
-
-  /**
-   * Converts <code>name</code> to uppercase. All non alphanumeric characters are converted to underscores.
-   *
-   * @param name    parameter name
-   */
-  private String toEnvironmentVariable(String name) {
-    return toEnvironmentVariable(name, null, null);
   }
 
   /**
@@ -315,5 +349,13 @@ public class AwsParameterStoreService {
       }
     }
     return environmentVariable.toString();
+  }
+
+  private String getParameterPath(String name) {
+    if (name.indexOf('/') == -1) {
+      return null;
+    }
+
+    return name.substring(0, name.lastIndexOf('/'));
   }
 }

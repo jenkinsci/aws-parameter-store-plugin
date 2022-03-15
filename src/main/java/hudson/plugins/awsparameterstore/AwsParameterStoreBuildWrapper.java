@@ -72,6 +72,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   private Boolean recursive;
   private String naming;
   private String namePrefixes;
+  private Boolean exactNames;
 
   private transient AwsParameterStoreService parameterStoreService;
 
@@ -80,7 +81,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
    */
   @DataBoundConstructor
   public AwsParameterStoreBuildWrapper() {
-    this(null, null, null, false, null, null);
+    this(null, null, null, false, null, null, false);
   }
 
   /**
@@ -92,15 +93,17 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
    * @param recursive       fetch all parameters within a hierarchy
    * @param naming          environment variable naming: basename, absolute, relative
    * @param namePrefixes    filter parameters by Name with beginsWith filter
+   * @param exactNames      Whether name prefixes should be treated as exact parameter names
    */
   @Deprecated
-  public AwsParameterStoreBuildWrapper(String credentialsId, String regionName, String path, Boolean recursive, String naming, String namePrefixes) {
+  public AwsParameterStoreBuildWrapper(String credentialsId, String regionName, String path, Boolean recursive, String naming, String namePrefixes, Boolean exactNames) {
     this.credentialsId = credentialsId;
     this.regionName = regionName;
     this.path = path;
     this.recursive = recursive;
     this.naming = naming;
     this.namePrefixes = namePrefixes;
+    this.exactNames = exactNames;
   }
 
   /**
@@ -202,6 +205,24 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   }
 
   /**
+   * Gets exactNames flag.
+   * @return exactNames
+   */
+  public Boolean getExactNames() {
+    return exactNames;
+  }
+
+  /**
+   * Sets the exactNames flag.
+   *
+   * @param exactNames  exact names flag
+   */
+  @DataBoundSetter
+  public void setExactNames(Boolean exactNames) {
+    this.exactNames = exactNames;
+  }
+
+  /**
    * Sets the name prefixes filter.
    *
    * @param namePrefixes  name prefixes filter
@@ -214,7 +235,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   @Override
   public void setUp(Context context, Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener, EnvVars initialEnvironment) throws IOException, InterruptedException {
     AwsParameterStoreService awsParameterStoreService = new AwsParameterStoreService(credentialsId, regionName);
-    awsParameterStoreService.buildEnvVars(context, initialEnvironment, path, recursive, naming, namePrefixes);
+    awsParameterStoreService.buildEnvVars(context, initialEnvironment, path, recursive, naming, namePrefixes, exactNames);
   }
 
   /**
