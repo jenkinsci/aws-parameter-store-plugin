@@ -28,8 +28,6 @@ import java.util.Collection;
 
 import jenkins.tasks.SimpleBuildWrapper;
 
-import org.apache.commons.lang.StringUtils;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -144,7 +142,7 @@ public class AwsParameterStoreBuildWrapperTest {
     Assert.assertEquals("path", path, awsParameterStoreBuildWrapper.getPath());
     Assert.assertEquals("recursive", recursive, awsParameterStoreBuildWrapper.getRecursive());
     Assert.assertEquals("naming", naming, awsParameterStoreBuildWrapper.getNaming());
-    Assert.assertEquals("namePrefixes", StringUtils.stripToNull(namePrefixes), awsParameterStoreBuildWrapper.getNamePrefixes());
+    Assert.assertEquals("namePrefixes", stripToNull(namePrefixes), awsParameterStoreBuildWrapper.getNamePrefixes());
   }
 
   /**
@@ -158,6 +156,14 @@ public class AwsParameterStoreBuildWrapperTest {
     } catch(Exception e) {
       Assert.fail("Unexpected exception: " + e.getMessage());
     }
+  }
+
+  private static String stripToNull(String str) {
+    if (str == null) {
+      return null;
+    }
+    String trimmed = str.trim();
+    return trimmed.isEmpty() ? null : trimmed;
   }
 
   /**

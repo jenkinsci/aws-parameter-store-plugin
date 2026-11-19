@@ -58,8 +58,6 @@ import hudson.ProxyConfiguration;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildWrapper;
 
-import org.apache.commons.lang.StringUtils;
-
 /**
  * AWS Parameter Store client.
  *
@@ -91,7 +89,7 @@ public class AwsParameterStoreService {
    */
   public AwsParameterStoreService(String credentialsId, String regionName) {
     this.credentialsId = credentialsId;
-    this.regionName = StringUtils.defaultString(regionName, DEFAULT_REGION);
+    this.regionName = regionName != null ? regionName : DEFAULT_REGION;
   }
 
   /**
@@ -149,7 +147,7 @@ public class AwsParameterStoreService {
   private AWSCredentialsProvider getAWSCredentialsProvider(Map<String,String> env, String credentialsId) {
     AWSCredentialsProvider credentialsProvider = null;
 
-    if(StringUtils.isEmpty(credentialsId)) {
+    if(isEmpty(credentialsId)) {
       if(env.containsKey(AWS_ACCESS_KEY_ID) && env.containsKey(AWS_SECRET_ACCESS_KEY)) {
         if(env.containsKey(AWS_SESSION_TOKEN)) {
           credentialsProvider = new AWSStaticCredentialsProvider(
@@ -186,7 +184,7 @@ public class AwsParameterStoreService {
    * @param namePrefixes  filter parameters by Name with beginsWith filter
    */
   public void buildEnvVars(SimpleBuildWrapper.Context context, Map<String,String> env, String path, Boolean recursive, String naming, String namePrefixes)  {
-    if(StringUtils.isEmpty(path)) {
+    if(isEmpty(path)) {
       buildEnvVarsWithParameters(context, env, namePrefixes);
     } else {
       buildEnvVarsWithParametersByPath(context, env, path, recursive, naming);
@@ -206,7 +204,7 @@ public class AwsParameterStoreService {
 
     try {
       DescribeParametersRequest describeParametersRequest = new DescribeParametersRequest().withMaxResults(1);
-      if (!StringUtils.isEmpty(namePrefixes)) {
+      if (!isEmpty(namePrefixes)) {
         describeParametersRequest = describeParametersRequest.withParameterFilters(
                 new ParameterStringFilter().withKey("Name").withOption("BeginsWith").withValues(namePrefixes.split(",")));
       }
@@ -315,5 +313,9 @@ public class AwsParameterStoreService {
       }
     }
     return environmentVariable.toString();
+  }
+
+  private static boolean isEmpty(String str) {
+    return str == null || str.isEmpty();
   }
 }

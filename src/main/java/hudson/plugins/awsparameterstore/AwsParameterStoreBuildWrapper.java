@@ -49,8 +49,6 @@ import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildWrapper;
 
-import org.apache.commons.lang.StringUtils;
-
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -118,7 +116,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
    */
   @DataBoundSetter
   public void setCredentialsId(String credentialsId) {
-    this.credentialsId = StringUtils.stripToNull(credentialsId);
+    this.credentialsId = stripToNull(credentialsId);
   }
 
   /**
@@ -154,7 +152,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
    */
   @DataBoundSetter
   public void setPath(String path) {
-    this.path = StringUtils.stripToNull(path);
+    this.path = stripToNull(path);
   }
 
   /**
@@ -208,7 +206,15 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
    */
   @DataBoundSetter
   public void setNamePrefixes(String namePrefixes) {
-    this.namePrefixes = StringUtils.stripToNull(namePrefixes);
+    this.namePrefixes = stripToNull(namePrefixes);
+  }
+
+  private static String stripToNull(String str) {
+    if (str == null) {
+      return null;
+    }
+    String trimmed = str.trim();
+    return trimmed.isEmpty() ? null : trimmed;
   }
 
   @Override

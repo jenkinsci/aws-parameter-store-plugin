@@ -49,7 +49,6 @@ import jenkins.tasks.SimpleBuildWrapper;
 import hudson.EnvVars;
 import hudson.model.Hudson;
 
-import org.apache.commons.lang.StringUtils;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Assert;
@@ -361,7 +360,7 @@ public class AwsParameterStoreServiceTest {
                  new ArrayList<com.amazonaws.services.simplesystemsmanagement.model.Parameter>();
     for(int i = 0; i < parameters.length; i++) {
       String parameterName = parameters[i][NAME];
-      if(isMatchedByNamePrefixes(parameterName) || StringUtils.isEmpty(path) || parameterName.startsWith(path)) {
+      if(isMatchedByNamePrefixes(parameterName) || isEmpty(path) || parameterName.startsWith(path)) {
         params.add(new com.amazonaws.services.simplesystemsmanagement.model.Parameter().withName(parameterName).withValue(parameters[i][VALUE]));
       }
     }
@@ -372,7 +371,7 @@ public class AwsParameterStoreServiceTest {
    * Simulate match parameter name by prefixes
    */
   private boolean isMatchedByNamePrefixes(String parameterName) {
-    if (StringUtils.isEmpty(namePrefixes)) {
+    if (isEmpty(namePrefixes)) {
       return false;
     }
     for (String namePrefix :  namePrefixes.split(",")) {
@@ -381,6 +380,10 @@ public class AwsParameterStoreServiceTest {
       }
     }
     return false;
+  }
+
+  private static boolean isEmpty(String str) {
+    return str == null || str.isEmpty();
   }
 
   /**
